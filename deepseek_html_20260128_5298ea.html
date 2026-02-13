@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大模型参数详解 - 交互式演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* 16:9横向容器 */
+        .demo-container {
+            width: 96vw;
+            height: 54vw; /* 16:9比例 */
+            max-width: 1600px;
+            max-height: 900px;
+            background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+            border-radius: 20px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        /* 顶部标题 */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .title {
+            font-size: 44px;
+            font-weight: 800;
+            background: linear-gradient(90deg, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 5px 15px rgba(96, 165, 250, 0.3);
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 300;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        /* 主要内容区 - 两列布局（左侧隐藏） */
+        .content-wrapper {
+            display: grid;
+            grid-template-columns: 0.8fr 1.2fr;
+            gap: 30px;
+            height: calc(100% - 120px);
+            position: relative;
+        }
+
+        /* 左侧 - 参数按钮面板 */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative;
+        }
+
+        .param-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            height: 100%;
+        }
+
+        .param-btn {
+            background: rgba(30, 41, 59, 0.8);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .param-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.6);
+            transform: translateX(5px);
+        }
+
+        .param-btn.active {
+            background: rgba(34, 211, 238, 0.15);
+            border-color: #22d3ee;
+            box-shadow: 0 5px 20px rgba(34, 211, 238, 0.3);
+        }
+
+        .param-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            background: rgba(59, 130, 246, 0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .param-btn.active .param-icon {
+            background: rgba(34, 211, 238, 0.3);
+        }
+
+        .param-btn-text {
+            flex: 1;
+        }
+
+        .param-btn-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+            padding: 5px 12px;
+            border-radius: 8px;
+        }
+
+        /* 弹出式详情面板 */
+        .detail-panel {
+            position: absolute;
+            left: 100%;
+            top: 0;
+            width: 500px;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 15px;
+            padding: 30px;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            transform: translateX(-20px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.4s ease;
+            overflow-y: auto;
+        }
+
+        .detail-panel.active {
+            transform: translateX(0);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .detail-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #60a5fa;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .detail-icon {
+            font-size: 32px;
+        }
+
+        .close-btn {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: none;
+            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .detail-content {
+            line-height: 1.6;
+        }
+
+        .param-definition {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 10px;
+            border-left: 4px solid #60a5fa;
+        }
+
+        .analogy-box {
+            background: rgba(34, 211, 238, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #22d3ee;
+        }
+
+        .analogy-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #22d3ee;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .analogy-content {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+        }
+
+        .effect-box {
+            background: rgba(245, 158, 11, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .effect-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #f59e0b;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .effect-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .effect-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .effect-list li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #f59e0b;
+            font-size: 20px;
+        }
+
+        /* 右侧 - 主演示区 */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .visualization-section {
+            flex: 1;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-title {
+            font-size: 24px;
+            color: #34d399;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title i {
+            font-size: 28px;
+        }
+
+        .model-visualization {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .model-brain {
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(96, 165, 250, 0.2) 0%, rgba(96, 165, 250, 0.05) 70%);
+            border-radius: 50%;
+            position: relative;
+            border: 3px solid rgba(96, 165, 250, 0.4);
+            box-shadow: 0 0 50px rgba(96, 165, 250, 0.2);
+            animation: pulse 4s infinite ease-in-out;
+            margin-bottom: 30px;
+        }
+
+        .neuron {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #34d399;
+            border-radius: 50%;
+            box-shadow: 0 0 15px #34d399;
+        }
+
+        .param-controls {
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .slider-container {
+            margin-bottom: 20px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .slider-name {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+            padding: 6px 15px;
+            border-radius: 8px;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #60a5fa;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(96, 165, 250, 0.8);
+            transition: all 0.3s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            background: #34d399;
+            transform: scale(1.1);
+        }
+
+        .demo-section {
+            height: 300px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .demo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .demo-title {
+            font-size: 22px;
+            color: #60a5fa;
+            font-weight: 600;
+        }
+
+        .generate-btn {
+            background: linear-gradient(90deg, #60a5fa, #34d399);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(96, 165, 250, 0.4);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .demo-area {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .input-box, .output-box {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .box-title {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 10px;
+        }
+
+        .input-text, .output-text {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            border-radius: 10px;
+            padding: 15px;
+            color: white;
+            font-size: 15px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+        }
+
+        .output-text {
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* 底部信息 */
+        .footer {
+            position: absolute;
+            bottom: 15px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 14px;
+            z-index: 1;
+        }
+
+        /* 动画效果 */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 40px rgba(96, 165, 250, 0.3); }
+            50% { box-shadow: 0 0 70px rgba(96, 165, 250, 0.5); }
+            100% { box-shadow: 0 0 40px rgba(96, 165, 250, 0.3); }
+        }
+
+        @keyframes neuronGlow {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0.3; transform: scale(0.8); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease forwards;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 1400px) {
+            .demo-container {
+                padding: 25px;
+            }
+            
+            .title {
+                font-size: 38px;
+            }
+            
+            .subtitle {
+                font-size: 18px;
+            }
+            
+            .detail-panel {
+                width: 450px;
+            }
+            
+            .model-brain {
+                width: 220px;
+                height: 220px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container fade-in">
+        <!-- 顶部标题 -->
+        <div class="header">
+            <h1 class="title">大模型参数交互演示</h1>
+            <p class="subtitle">点击左侧参数按钮查看详细解释 | 实时调整参数观察AI生成变化</p>
+        </div>
+        
+        <!-- 主要内容区 -->
+        <div class="content-wrapper">
+            <!-- 左侧 - 参数按钮面板 -->
+            <div class="left-panel">
+                <div class="param-buttons">
+                    <button class="param-btn active" data-param="temperature">
+                        <div class="param-icon">🌡️</div>
+                        <div class="param-btn-text">
+                            <div>Temperature</div>
+                            <div style="font-size: 14px; color: rgba(255,255,255,0.6);">温度参数</div>
+                        </div>
+                        <div class="param-btn-value" id="tempBtnValue">0.7</div>
+                    </button>
+                    
+                    <button class="param-btn" data-param="top-p">
+                        <div class="param-icon">🎯</div>
+                        <div class="param-btn-text">
+                            <div>Top-p (核采样)</div>
+                            <div style="font-size: 14px; color: rgba(255,255,255,0.6);">累积概率采样</div>
+                        </div>
+                        <div class="param-btn-value" id="topPBtnValue">0.9</div>
+                    </button>
+                    
+                    <button class="param-btn" data-param="max-tokens">
+                        <div class="param-icon">📏</div>
+                        <div class="param-btn-text">
+                            <div>Max Tokens</div>
+                            <div style="font-size: 14px; color: rgba(255,255,255,0.6);">最大生成长度</div>
+                        </div>
+                        <div class="param-btn-value" id="tokensBtnValue">500</div>
+                    </button>
+                    
+                    <button class="param-btn" data-param="frequency-penalty">
+                        <div class="param-icon">🔄</div>
+                        <div class="param-btn-text">
+                            <div>Frequency Penalty</div>
+                            <div style="font-size: 14px; color: rgba(255,255,255,0.6);">频率惩罚</div>
+                        </div>
+                        <div class="param-btn-value" id="freqBtnValue">0.0</div>
+                    </button>
+                    
+                    <button class="param-btn" data-param="presence-penalty">
+                        <div class="param-icon">✨</div>
+                        <div class="param-btn-text">
+                            <div>Presence Penalty</div>
+                            <div style="font-size: 14px; color: rgba(255,255,255,0.6);">存在惩罚</div>
+                        </div>
+                        <div class="param-btn-value" id="presenceBtnValue">0.0</div>
+                    </button>
+                </div>
+                
+                <!-- 弹出式详情面板 -->
+                <div class="detail-panel" id="detailPanel">
+                    <div class="detail-header">
+                        <div class="detail-title">
+                            <span class="detail-icon" id="detailIcon">🌡️</span>
+                            <span id="detailTitle">Temperature</span>
+                        </div>
+                        <button class="close-btn" id="closeDetail">✕</button>
+                    </div>
+                    
+                    <div class="detail-content">
+                        <div class="param-definition" id="paramDefinition">
+                            控制生成文本的随机性和创造性。值越高，输出越随机多样；值越低，输出越确定保守。
+                        </div>
+                        
+                        <div class="analogy-box">
+                            <div class="analogy-title">
+                                <span>🔍 类比理解</span>
+                            </div>
+                            <div class="analogy-content" id="analogyContent">
+                                就像烹饪时的火候，温度高则创意迸发（可能做出黑暗料理），温度低则稳定输出（保证可预测性）。
+                            </div>
+                        </div>
+                        
+                        <div class="effect-box">
+                            <div class="effect-title">
+                                <span>⚡ 参数影响</span>
+                            </div>
+                            <ul class="effect-list" id="effectList">
+                                <li>低值 (0.1-0.3): 高度确定性，输出稳定可预测</li>
+                                <li>中值 (0.4-0.7): 中等创造性，平衡创新与稳定</li>
+                                <li>高值 (0.8-1.2): 较高创造性，输出多样化</li>
+                                <li>极高值 (>1.2): 高度创造性，输出随机性强</li>
+                            </ul>
+                        </div>
+                        
+                        <div style="margin-top: 30px; padding: 20px; background: rgba(34, 211, 238, 0.1); border-radius: 10px;">
+                            <div style="font-size: 16px; color: #22d3ee; margin-bottom: 10px; font-weight: 600;">💡 使用建议</div>
+                            <div style="color: rgba(255, 255, 255, 0.8); line-height: 1.6;" id="usageTip">
+                                创意写作推荐0.7-0.9，技术文档推荐0.1-0.3，一般对话推荐0.5-0.7。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧 - 主演示区 -->
+            <div class="right-panel">
+                <!-- 上半部分：可视化 -->
+                <div class="visualization-section">
+                    <div class="section-title">
+                        <i>🧠</i> 参数调节与模型可视化
+                    </div>
+                    
+                    <div class="model-visualization">
+                        <div class="model-brain" id="modelBrain">
+                            <!-- 神经元将由JS动态生成 -->
+                        </div>
+                        
+                        <div class="param-controls">
+                            <div class="slider-container">
+                                <div class="slider-label">
+                                    <div class="slider-name">
+                                        <span>🌡️ Temperature</span>
+                                    </div>
+                                    <div class="slider-value" id="tempValue">0.7</div>
+                                </div>
+                                <input type="range" min="1" max="20" value="7" class="slider" id="tempSlider">
+                            </div>
+                            
+                            <div class="slider-container">
+                                <div class="slider-label">
+                                    <div class="slider-name">
+                                        <span>🎯 Top-p</span>
+                                    </div>
+                                    <div class="slider-value" id="topPValue">0.9</div>
+                                </div>
+                                <input type="range" min="10" max="100" value="90" class="slider" id="topPSlider">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 下半部分：演示区 -->
+                <div class="demo-section">
+                    <div class="demo-header">
+                        <div class="demo-title">AI文本生成演示</div>
+                        <button class="generate-btn" id="generateBtn">
+                            <span>🚀 生成文本</span>
+                        </button>
+                    </div>
+                    
+                    <div class="demo-area">
+                        <div class="input-box">
+                            <div class="box-title">输入提示词：</div>
+                            <textarea class="input-text" id="inputText" placeholder="请输入提示词，例如：请解释什么是大语言模型...">请解释什么是大语言模型，并说明它的应用场景</textarea>
+                        </div>
+                        
+                        <div class="output-box">
+                            <div class="box-title">AI生成结果：</div>
+                            <div class="output-text" id="outputText">
+                                <div id="outputContent">
+                                    <p>调整左侧参数按钮查看详细解释，或使用滑块调节参数值。</p>
+                                    <p style="margin-top: 10px;">点击"生成文本"按钮，观察不同参数对AI输出的影响。</p>
+                                    <div style="margin-top: 20px; padding: 15px; background: rgba(96, 165, 250, 0.1); border-radius: 8px;">
+                                        <div style="color: #60a5fa; font-weight: 600;">当前参数：</div>
+                                        <div style="margin-top: 8px; font-size: 14px;">
+                                            • Temperature: 0.7<br>
+                                            • Top-p: 0.9<br>
+                                            • Max Tokens: 500
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            面向大学生的AI教学演示 | 交互式参数学习 | 点击左侧按钮查看参数详细解释
+        </div>
+    </div>
+
+    <script>
+        // 参数数据
+        const paramData = {
+            'temperature': {
+                icon: '🌡️',
+                title: 'Temperature (温度参数)',
+                definition: '控制生成文本的随机性和创造性。值越高，输出越随机多样；值越低，输出越确定保守。',
+                analogy: '就像烹饪时的火候：温度高则创意迸发（可能做出黑暗料理），温度低则稳定输出（保证可预测性）。也像学生的考试发挥：高温度=自由发挥，低温度=标准答案。',
+                effects: [
+                    '低值 (0.1-0.3): 高度确定性，输出稳定可预测',
+                    '中值 (0.4-0.7): 中等创造性，平衡创新与稳定',
+                    '高值 (0.8-1.2): 较高创造性，输出多样化',
+                    '极高值 (>1.2): 高度创造性，输出随机性强'
+                ],
+                usage: '创意写作推荐0.7-0.9，技术文档推荐0.1-0.3，一般对话推荐0.5-0.7。',
+                min: 0,
+                max: 2,
+                step: 0.1,
+                defaultValue: 0.7
+            },
+            'top-p': {
+                icon: '🎯',
+                title: 'Top-p (核采样)',
+                definition: '从累积概率达到阈值p的词表中采样。更注重质量而非随机性，通常与Temperature配合使用。',
+                analogy: '就像考试时从最有可能的答案中挑选，而不是完全随机猜测。也像购物时只从评分前10%的商品中选择，保证质量。',
+                effects: [
+                    '低值 (0.1-0.5): 高度集中，仅考虑最可能选项',
+                    '中值 (0.6-0.9): 平衡质量与多样性',
+                    '高值 (0.9-1.0): 广泛采样，考虑多种可能性'
+                ],
+                usage: '一般推荐0.7-0.9，创意任务可提高到0.9-0.95，严谨任务可降低到0.5-0.7。',
+                min: 0,
+                max: 1,
+                step: 0.01,
+                defaultValue: 0.9
+            },
+            'max-tokens': {
+                icon: '📏',
+                title: 'Max Tokens (最大生成长度)',
+                definition: '控制生成内容的最大长度（以token为单位）。1个token ≈ 0.75个英文单词 ≈ 1-2个中文字符。',
+                analogy: '就像限制作文的字数：太短可能说不清楚，太长可能偏离主题。也像发言时间限制，需要在有限时间内表达完整。',
+                effects: [
+                    '短 (1-100): 简短回答，适合快速查询',
+                    '中 (100-500): 中等长度，适合一般解释',
+                    '长 (500-2000): 详细回答，适合深入解释',
+                    '极长 (>2000): 非常详细，适合长篇内容'
+                ],
+                usage: '根据任务需求调整：问答50-200，摘要200-500，创作500-2000。注意API有最大token限制。',
+                min: 1,
+                max: 4000,
+                step: 1,
+                defaultValue: 500
+            },
+            'frequency-penalty': {
+                icon: '🔄',
+                title: 'Frequency Penalty (频率惩罚)',
+                definition: '降低重复使用相同词汇的概率，防止模型陷入循环或过度重复。',
+                analogy: '就像老师提醒学生避免重复使用相同的词语，鼓励使用多样化的表达。也像写作时的词汇丰富性检查。',
+                effects: [
+                    '负值: 可能增加重复，使文本更一致',
+                    '0: 无惩罚，正常生成',
+                    '正值 (0.1-1.0): 减少重复，增加多样性',
+                    '高值 (>1.0): 强烈避免重复，可能影响连贯性'
+                ],
+                usage: '一般推荐0-0.5，长文本生成可适当提高，对话系统可设为0.1-0.2。',
+                min: -2,
+                max: 2,
+                step: 0.1,
+                defaultValue: 0.0
+            },
+            'presence-penalty': {
+                icon: '✨',
+                title: 'Presence Penalty (存在惩罚)',
+                definition: '降低已经出现过的主题或概念的重复概率，鼓励模型引入新话题和内容。',
+                analogy: '就像讨论会主持人引导大家讨论新的话题，避免一直围绕同一个点反复讨论。也像文章的结构安排，避免同一段落重复相同观点。',
+                effects: [
+                    '负值: 可能更聚焦于当前话题',
+                    '0: 无惩罚，正常生成',
+                    '正值 (0.1-1.0): 鼓励引入新话题',
+                    '高值 (>1.0): 强烈鼓励新内容，可能偏离主题'
+                ],
+                usage: '创意写作可设为0.1-0.3，头脑风暴可设为0.3-0.6，技术文档通常设为0。',
+                min: -2,
+                max: 2,
+                step: 0.1,
+                defaultValue: 0.0
+            }
+        };
+
+        // 页面初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 创建神经元动画
+            createNeurons();
+            
+            // 初始化参数按钮
+            initParamButtons();
+            
+            // 初始化滑块
+            initSliders();
+            
+            // 初始化生成按钮
+            initGenerateButton();
+            
+            // 初始化关闭按钮
+            document.getElementById('closeDetail').addEventListener('click', function() {
+                document.getElementById('detailPanel').classList.remove('active');
+            });
+            
+            // 初始动画
+            animatePage();
+            
+            // 默认显示temperature详情
+            showParamDetail('temperature');
+        });
+        
+        // 创建神经元
+        function createNeurons() {
+            const brain = document.getElementById('modelBrain');
+            const neuronCount = 50;
+            
+            for (let i = 0; i < neuronCount; i++) {
+                const neuron = document.createElement('div');
+                neuron.className = 'neuron';
+                
+                // 随机位置
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 90 + Math.random() * 80;
+                const x = 125 + Math.cos(angle) * distance;
+                const y = 125 + Math.sin(angle) * distance;
+                
+                neuron.style.left = `${x}px`;
+                neuron.style.top = `${y}px`;
+                
+                // 随机动画
+                const delay = Math.random() * 3;
+                const duration = 2 + Math.random() * 2;
+                neuron.style.animation = `neuronGlow ${duration}s infinite ${delay}s`;
+                
+                // 随机颜色
+                const colors = ['#34d399', '#60a5fa', '#f59e0b', '#ec4899'];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                neuron.style.background = color;
+                neuron.style.boxShadow = `0 0 15px ${color}`;
+                
+                brain.appendChild(neuron);
+            }
+        }
+        
+        // 初始化参数按钮
+        function initParamButtons() {
+            const buttons = document.querySelectorAll('.param-btn');
+            
+            buttons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const param = this.getAttribute('data-param');
+                    
+                    // 更新按钮激活状态
+                    buttons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 显示参数详情
+                    showParamDetail(param);
+                });
+            });
+        }
+        
+        // 显示参数详情
+        function showParamDetail(param) {
+            const data = paramData[param];
+            if (!data) return;
+            
+            // 更新详情面板内容
+            document.getElementById('detailIcon').textContent = data.icon;
+            document.getElementById('detailTitle').textContent = data.title;
+            document.getElementById('paramDefinition').textContent = data.definition;
+            document.getElementById('analogyContent').textContent = data.analogy;
+            
+            // 更新效果列表
+            const effectList = document.getElementById('effectList');
+            effectList.innerHTML = '';
+            data.effects.forEach(effect => {
+                const li = document.createElement('li');
+                li.textContent = effect;
+                effectList.appendChild(li);
+            });
+            
+            // 更新使用建议
+            document.getElementById('usageTip').textContent = data.usage;
+            
+            // 显示详情面板
+            document.getElementById('detailPanel').classList.add('active');
+        }
+        
+        // 初始化滑块
+        function initSliders() {
+            // Temperature滑块
+            const tempSlider = document.getElementById('tempSlider');
+            const tempValue = document.getElementById('tempValue');
+            const tempBtnValue = document.getElementById('tempBtnValue');
+            
+            tempSlider.addEventListener('input', function() {
+                const value = this.value / 10;
+                tempValue.textContent = value.toFixed(1);
+                tempBtnValue.textContent = value.toFixed(1);
+                updateNeuronActivity('temperature', value);
+            });
+            
+            // Top-p滑块
+            const topPSlider = document.getElementById('topPSlider');
+            const topPValue = document.getElementById('topPValue');
+            const topPBtnValue = document.getElementById('topPBtnValue');
+            
+            topPSlider.addEventListener('input', function() {
+                const value = this.value / 100;
+                topPValue.textContent = value.toFixed(2);
+                topPBtnValue.textContent = value.toFixed(2);
+                updateNeuronActivity('top-p', value);
+            });
+        }
+        
+        // 更新神经元活动
+        function updateNeuronActivity(param, value) {
+            const neurons = document.querySelectorAll('.neuron');
+            let intensity = 0.5;
+            
+            if (param === 'temperature') {
+                intensity = Math.min(1, value / 2);
+            } else if (param === 'top-p') {
+                intensity = 0.3 + value * 0.7;
+            }
+            
+            neurons.forEach(neuron => {
+                const randomFactor = 0.7 + Math.random() * 0.6;
+                const newIntensity = intensity * randomFactor;
+                
+                // 更新神经元的发光效果
+                neuron.style.opacity = 0.3 + newIntensity * 0.7;
+                neuron.style.transform = `scale(${0.8 + newIntensity * 0.4})`;
+                
+                // 更新动画速度
+                const duration = 3 - newIntensity * 1.5;
+                neuron.style.animationDuration = `${duration}s`;
+            });
+        }
+        
+        // 初始化生成按钮
+        function initGenerateButton() {
+            const generateBtn = document.getElementById('generateBtn');
+            const inputText = document.getElementById('inputText');
+            const outputContent = document.getElementById('outputContent');
+            
+            generateBtn.addEventListener('click', function() {
+                // 显示加载状态
+                const originalText = this.innerHTML;
+                this.innerHTML = '<span>⏳ 生成中...</span>';
+                this.disabled = true;
+                
+                // 获取当前参数值
+                const temp = parseFloat(document.getElementById('tempValue').textContent);
+                const topP = parseFloat(document.getElementById('topPValue').textContent);
+                const maxTokens = 500; // 默认值
+                
+                // 模拟AI生成延迟
+                setTimeout(() => {
+                    // 根据参数生成不同的文本
+                    const prompt = inputText.value || "请解释什么是大语言模型";
+                    const response = generateAIText(prompt, temp, topP, maxTokens);
+                    
+                    // 显示生成的文本（带打字机效果）
+                    outputContent.innerHTML = '';
+                    typewriterEffect(outputContent, response);
+                    
+                    // 恢复按钮状态
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                }, 1800);
+            });
+        }
+        
+        // 模拟AI生成文本
+        function generateAIText(prompt, temperature, topP, maxTokens) {
+            const responses = {
+                lowTemp: `大语言模型是基于Transformer架构的深度学习模型，通过在海量文本数据上预训练获得语言理解能力。它能够处理自然语言任务，如文本生成、翻译、摘要等。应用场景包括智能客服、内容创作、编程辅助和教育工具。`,
+                midTemp: `大语言模型就像是一个"数字语言大师"，它通过分析互联网上的海量文本，学会了人类语言的模式和规律。这种模型没有真正的理解能力，但能生成合理、连贯的文本。主要应用包括：智能对话系统、自动文档生成、代码辅助编写、个性化学习辅导等。`,
+                highTemp: `想象一下，有一个超级智能的"文本预测器"，它读过几乎所有的公开文本！大语言模型就是这样的存在。它通过Transformer架构捕捉词语间的复杂关系，能够创作诗歌、编写代码、回答问题，甚至模拟不同风格的写作。从聊天机器人到创意写作助手，从代码生成到学术研究，它的应用正在改变我们的生活和工作方式。`
+            };
+            
+            // 根据temperature选择响应
+            let response;
+            if (temperature < 0.4) {
+                response = responses.lowTemp;
+            } else if (temperature < 0.8) {
+                response = responses.midTemp;
+            } else {
+                response = responses.highTemp;
+            }
+            
+            // 根据topP调整文本质量
+            if (topP < 0.7) {
+                response = response.replace(/[，。]/g, '，').replace(/[.!?]/g, '.');
+            }
+            
+            // 添加参数信息
+            response += `<br><br><div style="color: rgba(255,255,255,0.6); font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 10px;">
+                        <strong>生成参数：</strong>Temperature=${temperature.toFixed(1)}, Top-p=${topP.toFixed(2)}, Max Tokens=${maxTokens}<br>
+                        <strong>提示词：</strong>"${prompt.substring(0, 40)}${prompt.length > 40 ? '...' : ''}"
+                        </div>`;
+            
+            return response;
+        }
+        
+        // 打字机效果
+        function typewriterEffect(element, text) {
+            let i = 0;
+            const speed = 30; // 打字速度(毫秒)
+            
+            function typeWriter() {
+                if (i < text.length) {
+                    // 处理HTML标签
+                    if (text.charAt(i) === '<') {
+                        // 找到标签结束位置
+                        const tagEnd = text.indexOf('>', i);
+                        if (tagEnd !== -1) {
+                            element.innerHTML += text.substring(i, tagEnd + 1);
+                            i = tagEnd + 1;
+                        } else {
+                            element.innerHTML += text.charAt(i);
+                            i++;
+                        }
+                    } else {
+                        element.innerHTML += text.charAt(i);
+                        i++;
+                    }
+                    setTimeout(typeWriter, speed);
+                }
+            }
+            
+            typeWriter();
+        }
+        
+        // 页面动画
+        function animatePage() {
+            const elements = document.querySelectorAll('.header, .left-panel, .right-panel');
+            
+            elements.forEach((el, index) => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(30px)';
+                el.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+                
+                setTimeout(() => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, 200 + index * 200);
+            });
+        }
+    </script>
+</body>
+</html>
