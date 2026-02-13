@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页定时器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e3a8a);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #e2e8f0;
+        }
+
+        .container {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 24px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            box-shadow: 0 8px 32px rgba(2, 8, 20, 0.4), 
+                        0 0 16px rgba(99, 102, 241, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+            z-index: -1;
+        }
+
+        h1 {
+            text-align: center;
+            color: #e0f2fe;
+            margin-bottom: 30px;
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
+        }
+
+        .input-section {
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .time-input {
+            flex: 1;
+            min-width: 80px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #cbd5e1;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+            transition: all 0.3s;
+            color: #e2e8f0;
+            font-weight: 500;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
+        }
+
+        input[type="number"]::placeholder {
+            color: #94a3b8;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .preset-btn {
+            padding: 10px;
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #cbd5e1;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .preset-btn:hover {
+            background: rgba(56, 70, 97, 0.7);
+            border-color: #60a5fa;
+            transform: translateY(-2px);
+        }
+
+        .display-section {
+            text-align: center;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .time-display {
+            font-size: 72px;
+            font-weight: 300;
+            color: #e0f2fe;
+            font-family: 'Roboto Mono', monospace;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(96, 165, 250, 0.7);
+            transition: all 0.3s;
+        }
+
+        .time-display.warning {
+            color: #fbbf24;
+            text-shadow: 0 0 15px rgba(251, 191, 36, 0.7);
+            animation: pulse 1s infinite;
+        }
+
+        .time-display.danger {
+            color: #f87171;
+            text-shadow: 0 0 20px rgba(248, 113, 113, 0.8);
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 25px;
+            box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            width: 100%;
+            transition: width 1s linear;
+            border-radius: 5px;
+            box-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #f87171, #ef4444);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .sound-section {
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 24px;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+
+        .sound-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        select {
+            padding: 10px 15px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 8px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 150px;
+            color: #e2e8f0;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
+        }
+
+        .test-sound-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+        }
+
+        .test-sound-btn:hover {
+            background: linear-gradient(135deg, #34d399, #10b981);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #3b82f6;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(96, 165, 250, 0.8);
+        }
+
+        .volume-value {
+            min-width: 40px;
+            text-align: right;
+            font-size: 14px;
+            color: #cbd5e1;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(30, 41, 59, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: #e2e8f0;
+            padding: 18px 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(2, 8, 20, 0.4);
+            transform: translateX(400px);
+            transition: transform 0.3s;
+            z-index: 1000;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            max-width: 320px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification h3 {
+            margin-bottom: 8px;
+            font-size: 18px;
+            color: #e0f2fe;
+        }
+
+        .notification p {
+            font-size: 14px;
+            color: #cbd5e1;
+        }
+
+        .close-notification {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .close-notification:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        @media (max-width: 480px) {
+            .time-display {
+                font-size: 56px;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
+            .time-input {
+                min-width: 100%;
+            }
+
+            .container {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⏰ 智能定时器</h1>
+        
+        <div class="input-section">
+            <label>快速预设</label>
+            <div class="preset-buttons">
+                <button class="preset-btn" data-minutes="5">5分钟</button>
+                <button class="preset-btn" data-minutes="10">10分钟</button>
+                <button class="preset-btn" data-minutes="15">15分钟</button>
+                <button class="preset-btn" data-minutes="25">25分钟</button>
+                <button class="preset-btn" data-minutes="30">30分钟</button>
+                <button class="preset-btn" data-minutes="45">45分钟</button>
+            </div>
+            
+            <label>自定义时间</label>
+            <div class="input-group">
+                <div class="time-input">
+                    <label for="hours">小时</label>
+                    <input type="number" id="hours" min="0" max="23" value="0">
+                </div>
+                <div class="time-input">
+                    <label for="minutes">分钟</label>
+                    <input type="number" id="minutes" min="0" max="59" value="10">
+                </div>
+                <div class="time-input">
+                    <label for="seconds">秒</label>
+                    <input type="number" id="seconds" min="0" max="59" value="0">
+                </div>
+            </div>
+        </div>
+
+        <div class="display-section">
+            <div class="time-display" id="timeDisplay">00:10:00</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <div class="control-buttons">
+            <button class="btn-primary" id="startBtn">开始</button>
+            <button class="btn-secondary" id="pauseBtn" disabled>暂停</button>
+            <button class="btn-danger" id="resetBtn">重置</button>
+        </div>
+
+        <div class="sound-section">
+            <label>提醒设置</label>
+            <div class="sound-controls">
+                <select id="soundSelect">
+                    <option value="beep">经典嘀声</option>
+                    <option value="bell">铃声</option>
+                    <option value="chime">风铃声</option>
+                    <option value="alarm">警报声</option>
+                    <option value="notification">通知音</option>
+                    <option value="custom">自定义</option>
+                </select>
+                <button class="test-sound-btn" id="testSoundBtn">测试声音</button>
+            </div>
+            
+            <div class="volume-control">
+                <label>音量：</label>
+                <input type="range" id="volumeSlider" min="0" max="100" value="70">
+                <span class="volume-value" id="volumeValue">70%</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">
+        <button class="close-notification" id="closeNotification">&times;</button>
+        <h3>⏰ 时间到！</h3>
+        <p>倒计时已结束</p>
+    </div>
+
+    <script>
+        class Timer {
+            constructor() {
+                this.totalSeconds = 0;
+                this.remainingSeconds = 0;
+                this.isRunning = false;
+                this.interval = null;
+                this.audioContext = null;
+                this.volume = 0.7;
+                this.soundInterval = null; // 用于持续播放声音的interval
+                
+                this.initializeElements();
+                this.attachEventListeners();
+                this.initializeAudio();
+                this.updateDisplay();
+            }
+
+            initializeElements() {
+                // 输入元素
+                this.hoursInput = document.getElementById('hours');
+                this.minutesInput = document.getElementById('minutes');
+                this.secondsInput = document.getElementById('seconds');
+                this.timeDisplay = document.getElementById('timeDisplay');
+                this.progressFill = document.getElementById('progressFill');
+                
+                // 按钮元素
+                this.startBtn = document.getElementById('startBtn');
+                this.pauseBtn = document.getElementById('pauseBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.testSoundBtn = document.getElementById('testSoundBtn');
+                this.presetButtons = document.querySelectorAll('.preset-btn');
+                
+                // 声音控制元素
+                this.soundSelect = document.getElementById('soundSelect');
+                this.volumeSlider = document.getElementById('volumeSlider');
+                this.volumeValue = document.getElementById('volumeValue');
+                
+                // 通知元素
+                this.notification = document.getElementById('notification');
+                this.closeNotification = document.getElementById('closeNotification');
+            }
+
+            attachEventListeners() {
+                // 预设按钮
+                this.presetButtons.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const minutes = parseInt(e.target.dataset.minutes);
+                        this.setTime(0, minutes, 0);
+                    });
+                });
+
+                // 控制按钮
+                this.startBtn.addEventListener('click', () => this.start());
+                this.pauseBtn.addEventListener('click', () => this.pause());
+                this.resetBtn.addEventListener('click', () => this.reset());
+                this.testSoundBtn.addEventListener('click', () => this.playSound());
+                this.closeNotification.addEventListener('click', () => this.hideNotification());
+
+                // 音量控制
+                this.volumeSlider.addEventListener('input', (e) => {
+                    this.volume = e.target.value / 100;
+                    this.volumeValue.textContent = e.target.value + '%';
+                });
+
+                // 输入验证
+                [this.hoursInput, this.minutesInput, this.secondsInput].forEach(input => {
+                    input.addEventListener('input', () => {
+                        if (!this.isRunning) {
+                            this.updateFromInputs();
+                        }
+                    });
+                });
+
+                // 键盘快捷键
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        if (this.isRunning) {
+                            this.pause();
+                        } else {
+                            this.start();
+                        }
+                    } else if (e.code === 'Escape') {
+                        this.reset();
+                    }
+                });
+            }
+
+            initializeAudio() {
+                try {
+                    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.audioContext = new AudioContext();
+                } catch (e) {
+                    console.log('Web Audio API 不支持');
+                }
+            }
+
+            setTime(hours, minutes, seconds) {
+                if (this.isRunning) return;
+                
+                this.hoursInput.value = hours;
+                this.minutesInput.value = minutes;
+                this.secondsInput.value = seconds;
+                this.updateFromInputs();
+            }
+
+            updateFromInputs() {
+                const hours = parseInt(this.hoursInput.value) || 0;
+                const minutes = parseInt(this.minutesInput.value) || 0;
+                const seconds = parseInt(this.secondsInput.value) || 0;
+                
+                this.totalSeconds = hours * 3600 + minutes * 60 + seconds;
+                this.remainingSeconds = this.totalSeconds;
+                this.updateDisplay();
+            }
+
+            start() {
+                if (this.remainingSeconds <= 0) {
+                    this.updateFromInputs();
+                }
+                
+                if (this.remainingSeconds > 0) {
+                    this.isRunning = true;
+                    this.startBtn.disabled = true;
+                    this.pauseBtn.disabled = false;
+                    this.hoursInput.disabled = true;
+                    this.minutesInput.disabled = true;
+                    this.secondsInput.disabled = true;
+                    
+                    const startTime = Date.now();
+                    const initialRemaining = this.remainingSeconds;
+                    
+                    this.interval = setInterval(() => {
+                        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                        this.remainingSeconds = Math.max(0, initialRemaining - elapsed);
+                        
+                        this.updateDisplay();
+                        
+                        if (this.remainingSeconds <= 0) {
+                            this.complete();
+                        }
+                    }, 100);
+                }
+            }
+
+            pause() {
+                this.isRunning = false;
+                clearInterval(this.interval);
+                this.startBtn.disabled = false;
+                this.pauseBtn.disabled = true;
+                this.startBtn.textContent = '继续';
+            }
+
+            reset() {
+                this.isRunning = false;
+                clearInterval(this.interval);
+                this.stopSound(); // 停止声音
+                this.updateFromInputs();
+                this.startBtn.disabled = false;
+                this.pauseBtn.disabled = true;
+                this.startBtn.textContent = '开始';
+                this.hoursInput.disabled = false;
+                this.minutesInput.disabled = false;
+                this.secondsInput.disabled = false;
+                this.timeDisplay.classList.remove('warning', 'danger');
+            }
+
+            complete() {
+                this.isRunning = false;
+                clearInterval(this.interval);
+                this.startBtn.disabled = false;
+                this.pauseBtn.disabled = true;
+                this.startBtn.textContent = '开始';
+                this.hoursInput.disabled = false;
+                this.minutesInput.disabled = false;
+                this.secondsInput.disabled = false;
+                
+                this.playSound(); // 播放5秒声音
+                this.showNotification();
+                
+                // 闪烁效果
+                let flashCount = 0;
+                const flashInterval = setInterval(() => {
+                    this.timeDisplay.classList.toggle('danger');
+                    flashCount++;
+                    if (flashCount >= 6) {
+                        clearInterval(flashInterval);
+                        this.timeDisplay.classList.add('danger');
+                    }
+                }, 300);
+            }
+
+            updateDisplay() {
+                const hours = Math.floor(this.remainingSeconds / 3600);
+                const minutes = Math.floor((this.remainingSeconds % 3600) / 60);
+                const seconds = this.remainingSeconds % 60;
+                
+                this.timeDisplay.textContent = 
+                    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                // 更新进度条
+                if (this.totalSeconds > 0) {
+                    const progress = (this.remainingSeconds / this.totalSeconds) * 100;
+                    this.progressFill.style.width = progress + '%';
+                }
+                
+                // 警告颜色
+                if (this.remainingSeconds <= 10 && this.remainingSeconds > 0) {
+                    this.timeDisplay.classList.add('danger');
+                    this.timeDisplay.classList.remove('warning');
+                } else if (this.remainingSeconds <= 30 && this.remainingSeconds > 10) {
+                    this.timeDisplay.classList.add('warning');
+                    this.timeDisplay.classList.remove('danger');
+                } else if (this.remainingSeconds > 30) {
+                    this.timeDisplay.classList.remove('warning', 'danger');
+                }
+            }
+
+            playSound() {
+                if (!this.audioContext) {
+                    this.initializeAudio();
+                    if (!this.audioContext) return;
+                }
+
+                const soundType = this.soundSelect.value;
+                const duration = 5; // 5秒
+                
+                // 清除之前的声音
+                this.stopSound();
+                
+                switch (soundType) {
+                    case 'beep':
+                        this.playBeep(duration);
+                        break;
+                    case 'bell':
+                        this.playBell(duration);
+                        break;
+                    case 'chime':
+                        this.playChime(duration);
+                        break;
+                    case 'alarm':
+                        this.playAlarm(duration);
+                        break;
+                    case 'notification':
+                        this.playNotification(duration);
+                        break;
+                    case 'custom':
+                        this.playCustomSound();
+                        break;
+                }
+            }
+
+            stopSound() {
+                if (this.soundInterval) {
+                    clearInterval(this.soundInterval);
+                    this.soundInterval = null;
+                }
+            }
+
+            playBeep(duration) {
+                // 每0.5秒响一次，持续5秒
+                let count = 0;
+                const interval = 500; // 每0.5秒响一次
+                const playOnce = () => {
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    gainNode.gain.setValueAtTime(this.volume, this.audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                    
+                    oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime);
+                    oscillator.type = 'sine';
+                    oscillator.start();
+                    oscillator.stop(this.audioContext.currentTime + 0.1);
+                };
+                
+                playOnce(); // 立即播放第一次
+                this.soundInterval = setInterval(() => {
+                    count++;
+                    if (count < duration * 2) { // 0.5秒一次，5秒共10次
+                        playOnce();
+                    } else {
+                        clearInterval(this.soundInterval);
+                    }
+                }, interval);
+            }
+
+            playBell(duration) {
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                gainNode.gain.setValueAtTime(this.volume, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+                
+                oscillator.frequency.setValueAtTime(520, this.audioContext.currentTime);
+                oscillator.type = 'triangle';
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + duration);
+            }
+
+            playChime(duration) {
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                gainNode.gain.setValueAtTime(this.volume * 0.5, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+                
+                oscillator.frequency.setValueAtTime(1047, this.audioContext.currentTime);
+                oscillator.type = 'sine';
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + duration);
+            }
+
+            playAlarm(duration) {
+                // 快速交替的警报声
+                let elapsed = 0;
+                const interval = 200; // 每0.2秒切换一次
+                
+                const playBurst = () => {
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    gainNode.gain.setValueAtTime(this.volume, this.audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + interval/1000);
+                    
+                    oscillator.frequency.setValueAtTime(elapsed % 400 < 200 ? 440 : 660, this.audioContext.currentTime);
+                    oscillator.type = 'square';
+                    oscillator.start();
+                    oscillator.stop(this.audioContext.currentTime + interval/1000);
+                };
+                
+                playBurst(); // 立即播放第一次
+                this.soundInterval = setInterval(() => {
+                    elapsed += interval;
+                    if (elapsed < duration * 1000) {
+                        playBurst();
+                    } else {
+                        clearInterval(this.soundInterval);
+                    }
+                }, interval);
+            }
+
+            playNotification(duration) {
+                // 每1秒响两次，持续5秒
+                let count = 0;
+                const interval = 500; // 每0.5秒检查一次
+                
+                const playDoubleBeep = () => {
+                    // 第一次哔声
+                    const osc1 = this.audioContext.createOscillator();
+                    const gain1 = this.audioContext.createGain();
+                    osc1.connect(gain1);
+                    gain1.connect(this.audioContext.destination);
+                    gain1.gain.setValueAtTime(this.volume, this.audioContext.currentTime);
+                    gain1.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                    osc1.frequency.setValueAtTime(600, this.audioContext.currentTime);
+                    osc1.type = 'sine';
+                    osc1.start();
+                    osc1.stop(this.audioContext.currentTime + 0.1);
+                    
+                    // 第二次哔声（0.15秒后）
+                    setTimeout(() => {
+                        const osc2 = this.audioContext.createOscillator();
+                        const gain2 = this.audioContext.createGain();
+                        osc2.connect(gain2);
+                        gain2.connect(this.audioContext.destination);
+                        gain2.gain.setValueAtTime(this.volume, this.audioContext.currentTime);
+                        gain2.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                        osc2.frequency.setValueAtTime(800, this.audioContext.currentTime);
+                        osc2.type = 'sine';
+                        osc2.start();
+                        osc2.stop(this.audioContext.currentTime + 0.3);
+                    }, 150);
+                };
+                
+                playDoubleBeep(); // 立即播放第一次
+                this.soundInterval = setInterval(() => {
+                    count++;
+                    if (count < duration * 2) { // 每0.5秒一次，5秒共10次
+                        playDoubleBeep();
+                    } else {
+                        clearInterval(this.soundInterval);
+                    }
+                }, interval);
+            }
+
+            playCustomSound() {
+                // 可以在这里添加自定义声音逻辑
+                console.log('播放自定义声音');
+            }
+
+            showNotification() {
+                this.notification.classList.add('show');
+                
+                // 浏览器通知API
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('⏰ 时间到！', {
+                        body: '倒计时已结束',
+                        icon: '⏰',
+                        requireInteraction: true
+                    });
+                } else if ('Notification' in window && Notification.permission !== 'denied') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            new Notification('⏰ 时间到！', {
+                                body: '倒计时已结束',
+                                icon: '⏰',
+                                requireInteraction: true
+                            });
+                        }
+                    });
+                }
+                
+                // 5秒后自动隐藏
+                setTimeout(() => {
+                    this.hideNotification();
+                }, 5000);
+            }
+
+            hideNotification() {
+                this.notification.classList.remove('show');
+            }
+        }
+
+        // 初始化定时器
+        const timer = new Timer();
+
+        // 请求通知权限
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    </script>
+</body>
+</html>
